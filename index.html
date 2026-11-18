@@ -118,31 +118,52 @@
     background:rgba(11,30,58,.08);color:#40536e;text-transform:uppercase}
   .badge.live{background:rgba(255,46,77,.2);color:#fda4af;border:1px solid rgba(255,46,77,.4)}
   .badge.final{background:rgba(16,185,129,.14);color:#047857;border:1px solid rgba(16,185,129,.35)}
-  .teams{display:grid;grid-template-columns:1fr auto 1fr;gap:10px;align-items:stretch;margin-top:14px}
-  .team{position:relative;overflow:hidden;border:0;border-radius:24px;padding:14px 6px 12px;cursor:pointer;
-    text-align:center;color:var(--text);min-height:132px;
+  .teams{display:grid;grid-template-columns:1fr auto 1fr;gap:14px;align-items:stretch;margin-top:14px}
+  .team{position:relative;overflow:hidden;display:flex;flex-direction:column;align-items:center;
+    border:3px solid transparent;border-radius:28px;padding:0;cursor:pointer;
+    text-align:center;color:var(--text);min-height:220px;
     background:linear-gradient(145deg,rgba(255,255,255,.85),rgba(255,255,255,.6));
     box-shadow:9px 9px 20px rgba(11,30,58,.14), -6px -6px 14px rgba(255,255,255,.95),
-      inset 0 1px 0 rgba(255,255,255,.95);transition:transform .15s ease, box-shadow .15s ease}
-  .team-bg{position:absolute;inset:-38%;background-size:cover;background-position:center;
-    filter:blur(16px) saturate(1.35);opacity:.6;transform:scale(1.15);pointer-events:none}
-  .team::after{content:"";position:absolute;inset:0;pointer-events:none;
-    background:linear-gradient(180deg,rgba(255,255,255,.55),rgba(255,255,255,.25));
-    backdrop-filter:blur(1px)}
-  .team>*{position:relative;z-index:1}
+      inset 0 1px 0 rgba(255,255,255,.95);transition:transform .15s ease, box-shadow .15s ease, border-color .15s ease}
+  /* Verdict en haut de la carte de match (style ESPN : bande + CORRECT / INCORRECT) */
+  .verdict{margin:-16px -16px 12px;padding:11px;border-radius:26px 26px 0 0;text-align:center;
+    font-family:"Archivo",sans-serif;font-weight:900;font-size:14px;letter-spacing:2.5px;color:#fff}
+  .verdict.ok{background:linear-gradient(90deg,#059669,#10b981)}
+  .verdict.ko{background:linear-gradient(90deg,#dc2626,#ef4444)}
+  /* Badge circulaire ✓ / ✗ qui chevauche le coin du carré choisi (ESPN) */
+  .pick-badge{position:absolute !important;top:10px;right:10px;width:36px;height:36px;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;font-size:19px;font-weight:900;color:#fff;
+    border:3px solid #fff;box-shadow:0 4px 12px rgba(0,0,0,.3);z-index:3}
+  .pick-badge.ok{background:#059669}
+  .pick-badge.ko{background:#dc2626}
+  .pick-badge.pend{background:#f59e0b}
+  .team-bg{position:absolute !important;inset:-38%;z-index:0;background-size:cover;background-position:center;
+    filter:blur(16px) saturate(1.35);opacity:.75;transform:scale(1.15);pointer-events:none}
+  .team::after{content:"";position:absolute;inset:0;z-index:0;pointer-events:none;
+    background:linear-gradient(180deg,rgba(255,255,255,.30),rgba(255,255,255,.10))}
+  .team>*:not(.team-bg){position:relative;z-index:1}
   .team:hover:not(:disabled){transform:translateY(-3px)}
   .team:active:not(:disabled){transform:scale(.98)}
-  .team img{width:58px;height:58px;object-fit:contain;display:block;margin:0 auto 6px;
-    background:rgba(255,255,255,.94);border-radius:50%;padding:6px;
+  .team img{width:88px;height:88px;object-fit:contain;display:block;margin:16px auto 8px;
+    background:rgba(255,255,255,.94);border-radius:50%;padding:8px;
     box-shadow:0 6px 14px rgba(0,0,0,.35)}
-  .team .nm{font-weight:700;font-size:14px;line-height:1.2}
-  .team .ab{color:var(--muted);font-size:12px}
-  .team .sc{font-family:"Archivo",sans-serif;font-size:24px;font-weight:900;margin-top:2px}
-  .team.picked{background:linear-gradient(145deg,#fff3cf,#ffe9a8);border:2px solid var(--gold);
+  .team .nm{font-weight:800;font-size:15px;line-height:1.25;padding:0 8px}
+  .team .rec{color:var(--muted);font-size:13px;font-weight:600;margin-top:3px}
+  .team .pct{color:var(--text);font-size:13px;font-weight:800;margin-top:2px}
+  .team .choice-pill{margin-top:6px;font-size:10px;font-weight:800;letter-spacing:1px;color:#92400e;
+    background:rgba(255,184,28,.35);border:1px solid rgba(255,184,28,.6);padding:3px 9px;border-radius:999px}
+  /* Bande de score en bas du carré (ESPN) : grise si non choisie, verte si bon choix, rouge si mauvais */
+  .team .score-band{margin-top:auto;width:100%;padding:10px 0 12px;text-align:center;
+    font-family:"Archivo",sans-serif;font-size:26px;font-weight:900;color:#fff;background:#64748b}
+  .team .score-band.ok{background:#059669}
+  .team .score-band.ko{background:#dc2626}
+  .team.picked{background:linear-gradient(145deg,#fff8dc,#ffefae);border-color:var(--gold);
     box-shadow:0 0 0 3px rgba(255,184,28,.3), 0 12px 26px rgba(11,30,58,.2)}
-  .team.picked::after{content:"✓ TON CHOIX";display:block;margin-top:7px;font-size:10px;font-weight:800;letter-spacing:1px;color:var(--gold)}
-  .team.winner{border:2px solid var(--green);box-shadow:0 0 0 3px rgba(52,211,153,.25), 0 12px 26px rgba(11,30,58,.2)}
-  .team.loser{opacity:.55}
+  .team.winner{border-color:#059669;
+    box-shadow:0 0 0 3px rgba(5,150,105,.25), 0 12px 26px rgba(11,30,58,.2)}
+  .team.loser{border-color:#dc2626;
+    box-shadow:0 0 0 3px rgba(220,38,38,.25), 0 12px 26px rgba(11,30,58,.2)}
+  .team.dim{opacity:.55}
   .team:disabled{cursor:not-allowed}
   .vs{font-family:"Archivo",sans-serif;font-weight:900;color:var(--muted);font-size:13px;text-align:center;align-self:center}
   .gmeta{margin-top:10px;font-size:13px;color:var(--muted);text-align:center}
@@ -163,7 +184,7 @@
   footer{position:relative;z-index:1;color:var(--muted);font-size:12px;text-align:center;padding:0 12px 34px}
   @media (max-width:560px){
     header{padding:26px 12px 20px} .hero{padding:20px 14px;border-radius:26px}
-    section{padding:16px;border-radius:22px} .team img{width:48px;height:48px}
+    section{padding:16px;border-radius:22px} .team img{width:64px;height:64px;margin-top:12px} .team{min-height:196px} .team .score-band{font-size:22px}
     th,td{padding:9px 4px;font-size:13px} .team{min-height:122px}
   }
 </style>
@@ -326,13 +347,14 @@ async function fetchWeek(def) {
     const comp = e.competitions[0];
     const get = (ha) => comp.competitors.find((c) => c.homeAway === ha);
     const away = get("away"), home = get("home");
+    const recOf = (c) => { const r = (c.records || []).find((x) => x.type === "total"); return r ? r.summary : ""; };
     return {
       id: e.id, date: e.date,
       shortDetail: e.status.type.shortDetail || "",
       state: e.status.type.state, // pre | in | post
       clock: e.status.displayClock || "", period: e.status.period || 0,
-      away: { abbr: away.team.abbreviation, name: away.team.displayName, logo: away.team.logo, score: away.score == null ? null : Number(away.score) },
-      home: { abbr: home.team.abbreviation, name: home.team.displayName, logo: home.team.logo, score: home.score == null ? null : Number(home.score) },
+      away: { abbr: away.team.abbreviation, name: away.team.displayName, logo: away.team.logo, rec: recOf(away), score: away.score == null ? null : Number(away.score) },
+      home: { abbr: home.team.abbreviation, name: home.team.displayName, logo: home.team.logo, rec: recOf(home), score: home.score == null ? null : Number(home.score) },
     };
   }).sort((a, b) => new Date(a.date) - new Date(b.date));
   const byes = (d.week && d.week.teamsOnBye ? d.week.teamsOnBye : []).map((t) => t.abbreviation);
@@ -402,18 +424,40 @@ function renderTabs() {
 
 function teamBtn(g, side) {
   const t = g[side];
-  const pick = me ? (picksForWeek(currentWeek)[me] || {})[g.id] : null;
+  const all = picksForWeek(currentWeek);
+  const pick = me ? (all[me] || {})[g.id] : null;
   const w = winnerOf(g);
+  const isPick = pick === t.abbr;
+  // % des participants du pool qui ont choisi cette équipe (style ESPN "% Picked")
+  let nPick = 0, nTot = 0;
+  for (const p of PARTICIPANTS) { if ((all[p] || {})[g.id]) { nTot++; if ((all[p] || {})[g.id] === t.abbr) nPick++; } }
+  const pct = nTot ? Math.round(100 * nPick / PARTICIPANTS.length) : null;
   let cls = "team";
-  if (pick === t.abbr) cls += " picked";
-  if (w && w !== "TIE") cls += (w === t.abbr ? " winner" : " loser");
-  const score = t.score == null ? "" : "<div class='sc'>" + t.score + "</div>";
+  let badge = "", band = "";
+  if (isPick) {
+    cls += " picked";
+    if (w && w !== "TIE") {
+      const ok = w === t.abbr;
+      cls += ok ? " winner" : " loser";
+      badge = "<span class='pick-badge " + (ok ? "ok" : "ko") + "'>" + (ok ? "✓" : "✗") + "</span>";
+    } else {
+      badge = "<span class='pick-badge pend'>✓</span>";
+    }
+  } else if (w && w !== "TIE") cls += " dim";
+  if (t.score != null) {
+    const bandCls = isPick && w ? (w === t.abbr ? "ok" : "ko") : "";
+    band = "<div class='score-band " + bandCls + "'>" + t.score + "</div>";
+  }
   const locked = isLocked(g);
   return "<button class='" + cls + "' " + (locked ? "disabled" : "") +
     " data-game='" + g.id + "' data-abbr='" + t.abbr + "' title='" + t.name + "'>" +
-    "<div class='team-bg' style=\"background-image:url('" + t.logo + "')\"></div>" +
+    "<div class='team-bg' style=\"background-image:url('" + t.logo + "')\"></div>" + badge +
     "<img src='" + t.logo + "' alt='" + t.abbr + "' loading='lazy'>" +
-    "<div class='nm'>" + t.name + "</div><div class='ab'>" + t.abbr + "</div>" + score + "</button>";
+    "<div class='nm'>" + t.name + "</div>" +
+    (t.rec ? "<div class='rec'>" + t.rec + "</div>" : "") +
+    (pct != null ? "<div class='pct'>" + pct + " % choisis</div>" : "") +
+    (isPick && !w ? "<div class='choice-pill'>✓ TON CHOIX</div>" : "") +
+    band + "</button>";
 }
 
 function renderGames(data) {
@@ -444,7 +488,13 @@ function renderGames(data) {
         ? "Ton choix : <b>" + myPick + "</b> — <span class='ok'>✓ +1 pt</span>"
         : "Ton choix : <b>" + myPick + "</b> — <span class='ko'>✗ 0 pt</span> (gagnant : " + w + ")";
     } else if (w) meta = "Gagnant : <b>" + (w === "TIE" ? "Match nul" : w) + "</b>";
-    return "<div class='game'><div class='gdate'><span>" + fmtDate.format(new Date(g.date)) + "</span><span>" + badge + "</span></div>" +
+    let verdict = "";
+    if (me && myPicks[g.id] && w) {
+      verdict = w === "TIE"
+        ? "<div class='verdict ok'>MATCH NUL — +1 PT</div>"
+        : "<div class='verdict " + (myPicks[g.id] === w ? "ok" : "ko") + "'>" + (myPicks[g.id] === w ? "✓ BON CHOIX" : "✗ MAUVAIS CHOIX") + "</div>";
+    }
+    return "<div class='game'>" + verdict + "<div class='gdate'><span>" + fmtDate.format(new Date(g.date)) + "</span><span>" + badge + "</span></div>" +
       "<div class='teams'>" + teamBtn(g, "away") + "<div class='vs'>@</div>" + teamBtn(g, "home") + "</div>" +
       "<div class='gmeta'>" + (locked && g.state === "pre" ? "🔒 Verrouillé — match commencé. " : "") + meta + "</div></div>";
   }).join("");
