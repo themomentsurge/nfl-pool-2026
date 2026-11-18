@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pool NFL 2026-27 — Nic, Yves, Math, J-P, Gab</title>
+<!--
+  POOL NFL — MODE D'EMPLOI (2 endroits à modifier, tout est indiqué ci-dessous)
+  1) Cherche FIREBASE_CONFIG plus bas et colle ta config Firebase (étape 4 des instructions).
+     Tant que ce n'est pas fait, la page fonctionne en MODE DÉMO : les choix sont
+     enregistrés seulement sur le téléphone/ordi de la personne (localStorage).
+  2) Pour changer les participants, modifie la liste PARTICIPANTS.
+  3) L'historique (semaines passées) se met dans picks.json, à côté de ce fichier.
+     Format : { "8": { "Nic": { "401873023": "GB" }, ... } }
+  Scores et horaires : API publique ESPN (gratuite, sans clé) :
+  https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard
+  Règles : 1 point par bon choix. Match nul : 1 point si tu as choisi une des 2 équipes.
+  Un choix se verrouille au coup d'envoi de SON match (les autres matchs restent ouverts).
+-->
+<style>
+  :root{--bg:#0f172a;--card:#1e293b;--card2:#273449;--text:#f1f5f9;--muted:#94a3b8;
+    --green:#22c55e;--red:#ef4444;--gold:#f59e0b;--blue:#38bdf8;--line:#334155}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
+    background:var(--bg);color:var(--text)}
+  header{background:linear-gradient(135deg,#013369,#0f172a 60%);padding:22px 16px 16px;text-align:center}
+  header h1{margin:0;font-size:26px;letter-spacing:.5px}
+  header p{margin:6px 0 0;color:#cbd5e1;font-size:14px}
+  .wrap{max-width:980px;margin:0 auto;padding:14px 12px 60px}
+  .banner{border-radius:10px;padding:10px 14px;margin:12px 0;font-size:14px;line-height:1.45}
+  .banner.demo{background:#451a03;color:#fdba74;border:1px solid #9a3412}
+  .banner.live{background:#052e16;color:#86efac;border:1px solid #166534}
+  .banner.err{background:#450a0a;color:#fca5a5;border:1px solid #991b1b}
+  section{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin:12px 0}
+  h2{margin:0 0 10px;font-size:17px}
+  .who{display:flex;flex-wrap:wrap;gap:8px}
+  .who button{flex:1 1 90px;padding:12px 8px;font-size:16px;font-weight:700;border-radius:10px;
+    border:2px solid var(--line);background:var(--card2);color:var(--text);cursor:pointer}
+  .who button.sel{border-color:var(--gold);background:#3b2f0b;box-shadow:0 0 0 2px rgba(245,158,11,.35)}
+  .hint{color:var(--muted);font-size:13px;margin:8px 0 0}
+  .saved{color:var(--green);font-weight:700}
+  table{width:100%;border-collapse:collapse;font-size:14px}
+  th,td{padding:8px 6px;text-align:center;border-bottom:1px solid var(--line)}
+  th{color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.4px}
+  td:first-child,th:first-child{text-align:left}
+  .rank1{color:var(--gold);font-weight:800}
+  .weeks{display:flex;flex-wrap:wrap;gap:6px}
+  .weeks button{padding:9px 12px;border-radius:999px;border:1px solid var(--line);
+    background:var(--card2);color:var(--text);font-weight:700;cursor:pointer;font-size:14px}
+  .weeks button.sel{background:var(--blue);color:#082f49;border-color:var(--blue)}
+  .weeks button.done{opacity:.75}
+  .game{border:1px solid var(--line);border-radius:12px;padding:12px;margin:10px 0;background:var(--card2)}
+  .gdate{color:var(--muted);font-size:13px;display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}
+  .badge{font-size:12px;font-weight:700;padding:2px 8px;border-radius:999px;background:#334155}
+  .badge.live{background:#7f1d1d;color:#fecaca}
+  .badge.final{background:#14532d;color:#bbf7d0}
+  .teams{display:grid;grid-template-columns:1fr auto 1fr;gap:8px;align-items:center;margin-top:10px}
+  .team{border:2px solid var(--line);background:#0f172a;border-radius:10px;padding:10px 6px;
+    cursor:pointer;text-align:center;color:var(--text)}
+  .team img{width:52px;height:52px;object-fit:contain;display:block;margin:0 auto 4px}
+  .team .nm{font-weight:700;font-size:14px;line-height:1.2}
+  .team .ab{color:var(--muted);font-size:12px}
+  .team .sc{font-size:20px;font-weight:800;margin-top:2px}
+  .team.picked{border-color:var(--gold);background:#3b2f0b}
+  .team.winner{border-color:var(--green)}
+  .team.loser{opacity:.55}
+  .team:disabled{cursor:not-allowed}
+  .vs{font-weight:800;color:var(--muted);font-size:13px;text-align:center}
+  .gmeta{margin-top:8px;font-size:13px;color:var(--muted);text-align:center}
+  .gmeta .ok{color:var(--green);font-weight:700}
+  .gmeta .ko{color:var(--red);font-weight:700}
+  .pickstable td.good{background:rgba(34,197,94,.22);color:#bbf7d0;font-weight:700}
+  .pickstable td.bad{background:rgba(239,68,68,.20);color:#fecaca;font-weight:700}
+  .pickstable td.pend{color:#cbd5e1}
+  .pickstable td.none{color:#475569}
+  .pickstable tfoot td{font-weight:800;background:#0f172a}
+  .topbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;justify-content:space-between}
+  .btn{padding:9px 14px;border-radius:10px;border:1px solid var(--line);background:var(--card2);
+    color:var(--text);font-weight:700;cursor:pointer;font-size:14px}
+  .btn:hover{border-color:var(--blue)}
+  footer{color:var(--muted);font-size:13px;line-height:1.6;text-align:center;padding:0 12px 30px}
+  @media (max-width:560px){ header h1{font-size:21px} .team img{width:44px;height:44px} th,td{padding:7px 4px;font-size:13px} }
+</style>
+</head>
+<body>
+<header>
+  <h1>🏈 Pool NFL 2026-27</h1>
+  <p>Qui gagne chaque match ? 1 point par bon choix — classement en direct.</p>
+</header>
+<div class="wrap">
+  <div id="modeBanner" class="banner demo">⏳ Chargement…</div>
+
+  <section>
+    <h2>👤 1 — Qui es-tu ?</h2>
+    <div class="who" id="who"></div>
+    <p class="hint" id="whoHint">Choisis ton nom, puis clique sur une équipe dans chaque match ci-dessous. Ton choix est enregistré aussitôt.</p>
+    <p class="hint" id="saveState"></p>
+  </section>
+
+  <section>
+    <h2>🏆 Classement général</h2>
+    <div id="standings">Chargement du classement…</div>
+    <p class="hint">Total = toutes les semaines chargées (historique dans picks.json + semaines 11 à 18). Actualisé à chaque ouverture de la page, dès qu'un match est final.</p>
+  </section>
+
+  <section>
+    <h2>📅 2 — Choisis ta semaine</h2>
+    <div class="weeks" id="weekTabs"></div>
+    <div class="topbar" style="margin-top:12px">
+      <span id="weekTitle" class="hint" style="font-size:15px;color:var(--text);font-weight:700"></span>
+      <span>
+        <button class="btn" id="refreshBtn">↻ Actualiser les scores</button>
+        <button class="btn" id="exportBtn">⬇ Exporter mes choix</button>
+      </span>
+    </div>
+    <p class="hint" id="weekProgress"></p>
+  </section>
+
+  <section>
+    <h2>🎯 3 — Tes choix — <span id="gamesTitle">matchs</span></h2>
+    <div id="games">Chargement des matchs…</div>
+  </section>
+
+  <section>
+    <h2>📋 Tous les choix — comme dans ton Excel</h2>
+    <div style="overflow-x:auto">
+      <table class="pickstable" id="picksTable"></table>
+    </div>
+    <p class="hint">Vert = bon choix, rouge = mauvais choix, gris = pas encore de choix. La ligne du bas donne le total de la semaine, comme dans ton Excel.</p>
+  </section>
+</div>
+<footer>
+  Scores et horaires : API publique ESPN (NFL), sans clé, mise à jour à chaque ouverture de la page.<br>
+  Un choix se verrouille au coup d'envoi de son match. Les autres matchs de la semaine restent ouverts.<br>
+  Match nul (très rare) : 1 point si tu as choisi une des deux équipes.
+</footer>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
+import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-database.js";
+
+/* ================= À MODIFIER SI BESOIN ================= */
+const SEASON = 2026;
+const PARTICIPANTS = ["Nic", "Yves", "Math", "J-P", "Gab"];
+// Colle ici la config de ton app web Firebase (voir étape 4). Ne mets rien d'autre.
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyDscXO2tPWF1ixy89hpQsGAlOHGOWv6oN8",
+  authDomain: "pool-nfl-2026.firebaseapp.com",
+  databaseURL: "https://pool-nfl-2026-default-rtdb.firebaseio.com",
+  projectId: "pool-nfl-2026",
+  storageBucket: "pool-nfl-2026.firebasestorage.app",
+  messagingSenderId: "121509552488",
+  appId: "1:121509552488:web:b5f4e741204942d63736dd"
+};
+// Semaines : 11 à 18 = saison régulière, 19 à 22 = séries (Wild Card, Division, Conférence, Super Bowl)
+const WEEKS = [
+  { n: 11, label: "Sem. 11", type: 2, api: 11 },
+  { n: 12, label: "Sem. 12", type: 2, api: 12 },
+  { n: 13, label: "Sem. 13", type: 2, api: 13 },
+  { n: 14, label: "Sem. 14", type: 2, api: 14 },
+  { n: 15, label: "Sem. 15", type: 2, api: 15 },
+  { n: 16, label: "Sem. 16", type: 2, api: 16 },
+  { n: 17, label: "Sem. 17", type: 2, api: 17 },
+  { n: 18, label: "Sem. 18", type: 2, api: 18 },
+  { n: 19, label: "Wild Card", type: 3, api: 1 },
+  { n: 20, label: "Division", type: 3, api: 2 },
+  { n: 21, label: "Conférence", type: 3, api: 3 },
+  { n: 22, label: "Super Bowl", type: 3, api: 4 },
+];
+/* =============== FIN DES CHOSES À MODIFIER =============== */
+
+const $ = (id) => document.getElementById(id);
+const LS_KEY = "nfl-pool-picks-" + SEASON;
+const fmtDate = new Intl.DateTimeFormat("fr-CA", { weekday: "short", day: "numeric", month: "short", hour: "numeric", minute: "2-digit", timeZone: "America/Toronto" });
+
+let currentWeek = 11;
+let currentWeekDef = WEEKS[0];
+let weekCache = {};        // clé "type-api" -> { games, byes }
+let picksJson = {};        // historique du fichier picks.json
+let fbPicks = {};          // choix partagés (Firebase)
+let localPicks = loadLocal();
+let db = null, firebaseReady = false;
+let me = localStorage.getItem("nfl-pool-me") || "";
+
+function loadLocal() { try { return JSON.parse(localStorage.getItem(LS_KEY) || "{}"); } catch (e) { return {}; } }
+function saveLocal() { localStorage.setItem(LS_KEY, JSON.stringify(localPicks)); }
+function firebaseConfigured() { return FIREBASE_CONFIG.apiKey && !String(FIREBASE_CONFIG.apiKey).startsWith("COLLE"); }
+
+function setBanner() {
+  const b = $("modeBanner");
+  if (firebaseReady) { b.className = "banner live"; b.textContent = "✅ Connecté : les choix sont partagés entre tous les participants. Ouvre la page sur un autre téléphone pour vérifier."; }
+  else if (firebaseConfigured()) { b.className = "banner err"; b.textContent = "⚠️ Firebase configuré mais connexion impossible (vérifie les règles Realtime Database et l'URL). Les choix sont enregistrés seulement sur cet appareil pour l'instant."; }
+  else { b.className = "banner demo"; b.textContent = "⚠️ MODE DÉMO — Firebase pas encore configuré : tes choix sont enregistrés seulement sur cet appareil. Suis l'étape 4 pour que tout le monde voie les choix de tout le monde."; }
+}
+
+function initFirebase() {
+  if (!firebaseConfigured()) { setBanner(); return; }
+  try {
+    const app = initializeApp(FIREBASE_CONFIG);
+    db = getDatabase(app);
+    onValue(ref(db, "picks/" + SEASON), (snap) => {
+      fbPicks = snap.val() || {};
+      firebaseReady = true; setBanner(); renderAll();
+    }, () => { firebaseReady = false; setBanner(); });
+  } catch (e) { console.error(e); firebaseReady = false; setBanner(); }
+}
+
+// Choix effectifs pour une semaine : picks.json < local < Firebase
+function picksForWeek(n) {
+  const out = {};
+  for (const src of [picksJson[String(n)] || {}, localPicks["week" + n] || {}, fbPicks["week" + n] || {}]) {
+    for (const p of Object.keys(src)) out[p] = Object.assign({}, out[p] || {}, src[p]);
+  }
+  return out;
+}
+
+async function fetchWeek(def) {
+  const key = def.type + "-" + def.api;
+  if (weekCache[key]) return weekCache[key];
+  const url = "https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard?season=" + SEASON + "&seasontype=" + def.type + "&week=" + def.api;
+  const d = await (await fetch(url)).json();
+  const games = (d.events || []).map((e) => {
+    const comp = e.competitions[0];
+    const get = (ha) => comp.competitors.find((c) => c.homeAway === ha);
+    const away = get("away"), home = get("home");
+    return {
+      id: e.id, date: e.date,
+      shortDetail: e.status.type.shortDetail || "",
+      state: e.status.type.state, // pre | in | post
+      clock: e.status.displayClock || "", period: e.status.period || 0,
+      away: { abbr: away.team.abbreviation, name: away.team.displayName, logo: away.team.logo, score: away.score == null ? null : Number(away.score) },
+      home: { abbr: home.team.abbreviation, name: home.team.displayName, logo: home.team.logo, score: home.score == null ? null : Number(home.score) },
+    };
+  }).sort((a, b) => new Date(a.date) - new Date(b.date));
+  const byes = (d.week && d.week.teamsOnBye ? d.week.teamsOnBye : []).map((t) => t.abbreviation);
+  const out = { games, byes };
+  weekCache[key] = out;
+  return out;
+}
+
+function winnerOf(g) {
+  if (g.state !== "post" || g.away.score == null || g.home.score == null) return null;
+  if (g.away.score === g.home.score) return "TIE";
+  return g.away.score > g.home.score ? g.away.abbr : g.home.abbr;
+}
+function pointsForPick(g, pick) {
+  const w = winnerOf(g);
+  if (!w || !pick) return null; // null = match pas encore décidé
+  if (w === "TIE") return (pick === g.away.abbr || pick === g.home.abbr) ? 1 : 0;
+  return pick === w ? 1 : 0;
+}
+function isLocked(g) {
+  if (g.state !== "pre") return true;
+  if ((g.shortDetail || "").toUpperCase().includes("TBD")) return false; // heure pas encore fixée (ex. sem. 18)
+  return new Date(g.date).getTime() <= Date.now();
+}
+function weekKey(n) { return "week" + n; }
+
+async function savePick(weekN, gameId, abbr) {
+  if (!me) { alert("Choisis d'abord ton nom en haut de la page."); return; }
+  const g = (weekCache[currentWeekDef.type + "-" + currentWeekDef.api] || { games: [] }).games.find((x) => x.id === gameId);
+  if (g && isLocked(g)) { alert("Trop tard : ce match est commencé, le choix est verrouillé."); renderAll(); return; }
+  localPicks[weekKey(weekN)] = localPicks[weekKey(weekN)] || {};
+  localPicks[weekKey(weekN)][me] = localPicks[weekKey(weekN)][me] || {};
+  localPicks[weekKey(weekN)][me][gameId] = abbr;
+  saveLocal();
+  $("saveState").innerHTML = "<span class='saved'>✓ Choix enregistré : " + abbr + "</span>";
+  if (firebaseReady && db) {
+    try { await set(ref(db, "picks/" + SEASON + "/" + weekKey(weekN) + "/" + me + "/" + gameId), abbr); }
+    catch (e) { console.error(e); $("saveState").textContent = "Choix gardé sur cet appareil seulement (erreur Firebase)."; }
+  }
+  renderAll();
+}
+
+/* ---------------- Affichage ---------------- */
+function renderWho() {
+  $("who").innerHTML = PARTICIPANTS.map((p) =>
+    "<button class='" + (p === me ? "sel" : "") + "' data-p='" + p + "'>" + p + "</button>").join("");
+  document.querySelectorAll("#who button").forEach((b) => b.onclick = () => {
+    me = b.dataset.p; localStorage.setItem("nfl-pool-me", me); renderAll();
+  });
+  $("whoHint").textContent = me
+    ? "Tu es " + me + ". Clique sur une équipe dans chaque match ci-dessous — ton choix est enregistré aussitôt."
+    : "Choisis ton nom, puis clique sur une équipe dans chaque match ci-dessous. Ton choix est enregistré aussitôt.";
+}
+
+function renderTabs() {
+  $("weekTabs").innerHTML = WEEKS.map((w) => {
+    const cached = weekCache[w.type + "-" + w.api];
+    const done = cached && cached.games.length && cached.games.every((g) => g.state === "post");
+    return "<button class='" + (w.n === currentWeek ? "sel" : "") + (done ? " done" : "") + "' data-w='" + w.n + "'>" + w.label + "</button>";
+  }).join("");
+  document.querySelectorAll("#weekTabs button").forEach((b) => b.onclick = async () => {
+    currentWeek = Number(b.dataset.w);
+    currentWeekDef = WEEKS.find((w) => w.n === currentWeek);
+    await loadWeek(); renderAll();
+  });
+}
+
+function teamBtn(g, side) {
+  const t = g[side];
+  const pick = me ? (picksForWeek(currentWeek)[me] || {})[g.id] : null;
+  const w = winnerOf(g);
+  let cls = "team";
+  if (pick === t.abbr) cls += " picked";
+  if (w && w !== "TIE") cls += (w === t.abbr ? " winner" : " loser");
+  const score = t.score == null ? "" : "<div class='sc'>" + t.score + "</div>";
+  const locked = isLocked(g);
+  return "<button class='" + cls + "' " + (locked ? "disabled" : "") +
+    " data-game='" + g.id + "' data-abbr='" + t.abbr + "' title='" + t.name + "'>" +
+    "<img src='" + t.logo + "' alt='" + t.abbr + "' loading='lazy'>" +
+    "<div class='nm'>" + t.name + "</div><div class='ab'>" + t.abbr + "</div>" + score + "</button>";
+}
+
+function renderGames(data) {
+  const picks = picksForWeek(currentWeek);
+  const title = currentWeekDef.label + (currentWeekDef.n >= 19 ? " — séries" : "") + " • " + data.games.length + " matchs";
+  $("gamesTitle").textContent = title;
+  $("weekTitle").textContent = title + (data.byes.length ? " • En congé : " + data.byes.join(", ") : "");
+  const myPicks = (me && picks[me]) || {};
+  const done = data.games.filter((g) => g.state === "post").length;
+  $("weekProgress").textContent = me
+    ? me + " : " + Object.keys(myPicks).length + " / " + data.games.length + " choix faits cette semaine • " + done + " match(s) terminé(s)"
+    : data.games.length + " matchs • " + done + " terminé(s) — choisis ton nom pour faire tes choix.";
+  if (!data.games.length) { $("games").innerHTML = "<p class='hint'>Aucun match pour cette semaine pour l'instant (les équipes des séries ne sont pas encore connues).</p>"; return; }
+  $("games").innerHTML = data.games.map((g) => {
+    const locked = isLocked(g);
+    const w = winnerOf(g);
+    let badge = "<span class='badge'>À venir</span>";
+    if (g.state === "in") badge = "<span class='badge live'>EN COURS" + (g.period ? " • Q" + g.period : "") + (g.clock ? " • " + g.clock : "") + "</span>";
+    if (g.state === "post") badge = "<span class='badge final'>FINAL" + (g.shortDetail.includes("OT") ? " / OT" : "") + "</span>";
+    let meta = "";
+    if (me) {
+      const myPick = myPicks[g.id];
+      if (!myPick) meta = locked ? "Aucun choix (match commencé)" : "Clique sur ton gagnant 👆";
+      else if (w === null) meta = "Ton choix : <b>" + myPick + "</b>" + (locked ? " (verrouillé)" : "");
+      else if (w === "TIE") meta = "Match nul — <span class='ok'>+1 pt</span> (ton choix : " + myPick + ")";
+      else meta = myPick === w
+        ? "Ton choix : <b>" + myPick + "</b> — <span class='ok'>✓ +1 pt</span>"
+        : "Ton choix : <b>" + myPick + "</b> — <span class='ko'>✗ 0 pt</span> (gagnant : " + w + ")";
+    } else if (w) meta = "Gagnant : <b>" + (w === "TIE" ? "Match nul" : w) + "</b>";
+    return "<div class='game'><div class='gdate'><span>" + fmtDate.format(new Date(g.date)) + "</span><span>" + badge + "</span></div>" +
+      "<div class='teams'>" + teamBtn(g, "away") + "<div class='vs'>@</div>" + teamBtn(g, "home") + "</div>" +
+      "<div class='gmeta'>" + (locked && g.state === "pre" ? "🔒 Verrouillé — match commencé. " : "") + meta + "</div></div>";
+  }).join("");
+  document.querySelectorAll("#games .team:not(:disabled)").forEach((b) => b.onclick = () => savePick(currentWeek, b.dataset.game, b.dataset.abbr));
+}
+
+function renderPicksTable(data) {
+  const picks = picksForWeek(currentWeek);
+  let html = "<thead><tr><th>Match</th>" + PARTICIPANTS.map((p) => "<th>" + p + "</th>").join("") + "</tr></thead><tbody>";
+  for (const g of data.games) {
+    html += "<tr><td>" + g.away.abbr + " @ " + g.home.abbr + "<br><span style='color:var(--muted);font-size:12px'>" + fmtDate.format(new Date(g.date)) + "</span></td>";
+    for (const p of PARTICIPANTS) {
+      const pick = (picks[p] || {})[g.id];
+      if (!pick) { html += "<td class='none'>—</td>"; continue; }
+      const pts = pointsForPick(g, pick);
+      const cls = pts == null ? "pend" : (pts > 0 ? "good" : "bad");
+      html += "<td class='" + cls + "'>" + pick + (pts === 1 ? " ✓" : pts === 0 ? " ✗" : "") + "</td>";
+    }
+    html += "</tr>";
+  }
+  html += "</tbody><tfoot><tr><td>Total semaine</td>";
+  for (const p of PARTICIPANTS) {
+    let tot = 0, n = 0;
+    for (const g of data.games) { const pts = pointsForPick(g, (picks[p] || {})[g.id]); if (pts != null) { tot += pts; n++; } }
+    html += "<td>" + tot + " / " + n + "</td>";
+  }
+  html += "</tr></tfoot>";
+  $("picksTable").innerHTML = html;
+}
+
+async function renderStandings() {
+  // Semaines à compter : historique dans picks.json + semaines 11 à 18 (+ séries si des choix existent)
+  const weekNums = new Set(Object.keys(picksJson).map(Number));
+  for (let n = 11; n <= 18; n++) weekNums.add(n);
+  for (const n of Object.keys(fbPicks).map((k) => Number(k.replace("week", "")))) weekNums.add(n);
+  for (const n of Object.keys(localPicks).map((k) => Number(k.replace("week", "")))) weekNums.add(n);
+  const defs = [...weekNums].map((n) => WEEKS.find((w) => w.n === n)).filter(Boolean);
+  const stats = {}; PARTICIPANTS.forEach((p) => stats[p] = { pts: 0, bons: 0, joues: 0, semPts: 0, semJoues: 0 });
+  await Promise.all(defs.map(async (def) => {
+    const data = await fetchWeek(def);
+    const picks = picksForWeek(def.n);
+    for (const p of PARTICIPANTS) {
+      for (const g of data.games) {
+        const pts = pointsForPick(g, (picks[p] || {})[g.id]);
+        if (pts == null) continue;
+        stats[p].pts += pts; stats[p].bons += pts; stats[p].joues++;
+        if (def.n === currentWeek) { stats[p].semPts += pts; stats[p].semJoues++; }
+      }
+    }
+  }));
+  const rows = PARTICIPANTS.map((p) => ({ p, ...stats[p] }))
+    .sort((a, b) => b.pts - a.pts || b.bons - a.bons);
+  $("standings").innerHTML = "<table><thead><tr><th>#</th><th>Participant</th><th>Total</th><th>Cette semaine</th><th>Bons / Joués</th><th>%</th></tr></thead><tbody>" +
+    rows.map((r, i) => "<tr><td class='" + (i === 0 ? "rank1" : "") + "'>" + (i + 1) + "</td><td style='text-align:left;font-weight:700'>" + (i === 0 ? "👑 " : "") + r.p + "</td><td style='font-weight:800'>" + r.pts + "</td><td>" + r.semPts + " / " + r.semJoues + "</td><td>" + r.bons + " / " + r.joues + "</td><td>" + (r.joues ? Math.round(100 * r.bons / r.joues) + " %" : "—") + "</td></tr>").join("") +
+    "</tbody></table>";
+}
+
+function renderAll() {
+  renderWho(); renderTabs();
+  const key = currentWeekDef.type + "-" + currentWeekDef.api;
+  if (weekCache[key]) { renderGames(weekCache[key]); renderPicksTable(weekCache[key]); }
+}
+
+async function loadWeek() {
+  $("games").textContent = "Chargement des matchs…";
+  const data = await fetchWeek(currentWeekDef);
+  renderGames(data); renderPicksTable(data); renderTabs();
+}
+
+async function loadHistory() {
+  try { const r = await fetch("picks.json"); if (r.ok) picksJson = await r.json(); } catch (e) { picksJson = {}; }
+}
+
+$("refreshBtn").onclick = async () => {
+  delete weekCache[currentWeekDef.type + "-" + currentWeekDef.api];
+  await loadWeek(); await renderStandings();
+};
+$("exportBtn").onclick = () => {
+  const data = JSON.stringify({ [weekKey(currentWeek)]: { [me || "sans-nom"]: (picksForWeek(currentWeek)[me] || {}) } }, null, 2);
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([data], { type: "application/json" }));
+  a.download = "mes-choix-semaine-" + currentWeek + ".json"; a.click();
+};
+
+(async function init() {
+  initFirebase();
+  await loadHistory();
+  // Semaine courante selon ESPN (sans paramètre = semaine en cours)
+  try {
+    const d = await (await fetch("https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard?season=" + SEASON + "&seasontype=2")).json();
+    if (d.week && d.week.number >= 11 && d.week.number <= 18) {
+      currentWeek = d.week.number;
+      currentWeekDef = WEEKS.find((w) => w.n === currentWeek);
+    }
+  } catch (e) { /* on reste sur la semaine 11 */ }
+  renderAll();
+  await loadWeek();
+  await renderStandings();
+  setInterval(async () => { // rafraîchit les scores toutes les 60 s
+    delete weekCache[currentWeekDef.type + "-" + currentWeekDef.api];
+    try { await loadWeek(); await renderStandings(); } catch (e) {}
+  }, 60000);
+})();
+</script>
+</body>
+</html>
